@@ -36,6 +36,7 @@ enum {
     CHILD_ID_REMOTE_INTER_LUMIERE_TERRASSE,
     CHILD_ID_REMOTE_PRIORITE_LOCAL,
     CHILD_ID_REMOTE_PRIORITE_REMOTE,
+    CHILD_ID_SEND_STATE,
 };
 
 const uint8_t secondeTop = 00;
@@ -128,6 +129,7 @@ void presentation()
     present(CHILD_ID_REMOTE_INTER_LUMIERE_TERRASSE, S_BINARY);//, F("REMOTE_INTER_LUMIERE_TERRASSE"));
     present(CHILD_ID_REMOTE_PRIORITE_LOCAL, S_BINARY);//, F("CHILD_ID_REMOTE_PRIORITE_LOCAL"));
     present(CHILD_ID_REMOTE_PRIORITE_REMOTE, S_BINARY);//, F("CHILD_ID_REMOTE_PRIORITE_REMOTE"));
+    present(CHILD_ID_SEND_STATE, S_BINARY);//, F("CHILD_ID_SEND_STATE"));
 }
 
 const byte interruptPin = A0;
@@ -159,6 +161,7 @@ static const uint8_t periodeEnvoi = 6;
 DataAverage temperatureAverage(periodeEnvoi);
 
 bool setBacklightOn = false;
+bool needToSendState = false;
 
 const unsigned long sleepTime = 950;
 
@@ -179,7 +182,7 @@ void loop()
 
     if (processButtons())
     {
-        sendStates(true);
+        needToSendState = true;
         testLcdButton(true);
         displayState(currentTemperature);
     }
@@ -188,7 +191,7 @@ void loop()
         if (startup)
         {
             startup = false;
-            sendStates(true);
+            needToSendState = true;
         }
     }
 
@@ -242,7 +245,7 @@ void loop()
                         Serial.println("sendTemperature");
                         send(temperatureMsg.set(temperatureAverage.average(), 1));
                     }
-                    sendStates(true);
+                    needToSendState = true;
                 }
             }
         }
@@ -254,6 +257,12 @@ void loop()
             weatherStation->setBacklight(setBacklightOn);
             backlightState = setBacklightOn;
         }
+    }
+
+    if (needToSendState)
+    {
+        sendStates(true);
+        needToSendState = false;
     }
 
     wait(sleepTime);
@@ -290,10 +299,10 @@ bool processButtons()
 {
     bool retour = false;
 
-    localStateINTER_GENERAL = digitalRead(pinINTER_GENERAL) == LOW;
+    localStateINTER_GENERAL = (digitalRead(pinINTER_GENERAL) == LOW);
     for (int i = 0; i < nbRelais; i++)
     {
-        localCmdState[i] = digitalRead(pinInter[i]) == LOW;
+        localCmdState[i] = (digitalRead(pinInter[i]) == LOW);
     }
 
     bool newState[nbRelais];
@@ -393,6 +402,8 @@ void sendStates(bool all)
             send(stateMessage.set(prioriteLocal));
             stateMessage.setSensor(CHILD_ID_REMOTE_PRIORITE_REMOTE);
             send(stateMessage.set(prioriteRemote));
+            stateMessage.setSensor(CHILD_ID_SEND_STATE);
+            send(stateMessage.set(false));
         }
     }
     else
@@ -440,6 +451,9 @@ void receive(const MyMessage &message)
             break;
         case CHILD_ID_REMOTE_INTER_LUMIERE_TERRASSE:
             remoteCmdState[3] = message.getBool();
+            break;
+        case CHILD_ID_SEND_STATE:
+           needToSendState = true;
             break;
         }
     }
