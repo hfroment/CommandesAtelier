@@ -230,7 +230,7 @@ void loop()
 
             if (linkOk)
             {
-                if (cycleCourant > 0)
+                if (cycleCourant > 1)
                 {
                     cycleCourant--;
                 }
