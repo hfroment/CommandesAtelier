@@ -141,7 +141,7 @@ void setup()
     weatherStation->init();
     if (lcdPresent)
     {
-        weatherStation->log(0, "Shaton" + String("atelier"));
+        weatherStation->log(0, "Shaton " + String("atelier"));
         weatherStation->log(1, "Node ID = " + String(getNodeId()));
         delay(5000);
         weatherStation->clearScreen();
@@ -164,6 +164,7 @@ bool setBacklightOn = false;
 bool needToSendState = false;
 
 const unsigned long sleepTime = 950;
+const uint8_t subCycle = 10;
 
 void loop()
 {
@@ -180,28 +181,22 @@ void loop()
 
     //static bool isMinute = false;
 
-    if (processButtons())
+    if (startup)
     {
-        needToSendState = true;
-        testLcdButton(true);
+        processButtons();
         displayState(currentTemperature);
-    }
-    else
-    {
-        if (startup)
-        {
-            startup = false;
-            needToSendState = true;
-        }
+        testLcdButton(true);
+        startup = false;
+        needToSendState = true;
     }
 
     {
         secondeCourante = (secondeCourante + 1) % 60;
-//        bool okToSend = false;
+        //        bool okToSend = false;
         if (secondeCourante == secondeTop)
         {
             top = true;
-//            okToSend = true;
+            //            okToSend = true;
             //Serial.println(F("Minute"));
         }
         else if (secondeCourante == secondePretop)
@@ -265,14 +260,26 @@ void loop()
         needToSendState = false;
     }
 
-    wait(sleepTime);
-    testLcdButton(false);
+    for (uint8_t i = 0; i < subCycle; i++)
+    {
+        wait(sleepTime / subCycle);
+        if (processButtons())
+        {
+            displayState(currentTemperature);
+            needToSendState = true;
+            testLcdButton(true);
+        }
+        else
+        {
+            testLcdButton(false);
+        }
+    }
 }
 
 void testLcdButton(bool init)
 {
     static unsigned long cycleCourant = 0;
-    const uint64_t nbCyclesAllumage = (uint64_t)60 * (uint64_t)1000 / (uint64_t)sleepTime;
+    const uint64_t nbCyclesAllumage = (uint64_t)60 * (uint64_t)1000 / (uint64_t)sleepTime * (uint64_t)subCycle;
     //Serial.print("testLcdButton : ");
     //Serial.println(analogRead(boutonLcdPin));
     if (init || (analogRead(boutonLcdPin) < 512))
@@ -453,7 +460,7 @@ void receive(const MyMessage &message)
             remoteCmdState[3] = message.getBool();
             break;
         case CHILD_ID_SEND_STATE:
-           needToSendState = true;
+            needToSendState = true;
             break;
         }
     }
