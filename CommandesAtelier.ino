@@ -51,7 +51,7 @@ const uint8_t pinRELAIS_LUMIERE_TERRASSE = 10;
 const uint8_t pinINTER_GENERAL = 2;
 const uint8_t pinINTER_POMPE_BASSIN = 3;
 const uint8_t pinINTER_POMPE_CUVE = 4;
-const uint8_t pinINTER_PRISES_EXTERIEUR = 1;
+const uint8_t pinINTER_PRISES_EXTERIEUR = 5;
 const uint8_t pinINTER_LUMIERE_TERRASSE = 9;
 
 const uint8_t nbRelais = 4;
